@@ -1,0 +1,18 @@
+[project]
+name = "better-rdp"
+version = "0.1.0"
+description = "A launcher GUI for Windows Remote Desktop (mstsc) with painless account rotation."
+requires-python = ">=3.12"
+dependencies = [
+    "PySide6",
+    "pywin32",
+    "argon2-cffi",
+    "cryptography",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
