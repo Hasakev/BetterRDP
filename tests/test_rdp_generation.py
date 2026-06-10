@@ -99,6 +99,13 @@ def test_scale_factor_emitted_when_set(server, credential):
     assert fields["desktopscalefactor"] == ("i", "150")
 
 
+def test_suppresses_remote_identity_prompt(server, credential):
+    profile = DisplayProfile(name="Dynamic", mode=DisplayMode.WINDOWED_DYNAMIC)
+    fields = parse(rdp.generate(server, credential, profile, "s3cret-pw"))
+    # 0 = "connect and don't warn me" on a failed server-cert check (intranet scope).
+    assert fields["authentication level"] == ("i", "0")
+
+
 def test_password_field_is_structurally_a_dpapi_blob(server, credential):
     profile = DisplayProfile(name="Dynamic", mode=DisplayMode.WINDOWED_DYNAMIC)
     text = rdp.generate(server, credential, profile, "s3cret-pw")

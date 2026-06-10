@@ -39,6 +39,12 @@ def generate(
         lines.append(f"domain:s:{credential.domain}")
     lines.append(rdp_password_field(plaintext_password))
 
+    # Suppress the "identity of the remote computer cannot be verified" prompt that mstsc
+    # raises on a self-signed/untrusted server cert. 0 = connect and don't warn. This is
+    # the right default for a trusted intranet (the project's stated scope); it trades the
+    # cert-mismatch warning away, which is acceptable there but not over an untrusted link.
+    lines.append("authentication level:i:0")
+
     if profile.mode is DisplayMode.FULLSCREEN_MULTIMON:
         # screen mode id 2 = full screen; span the selected monitors.
         lines.append("screen mode id:i:2")

@@ -21,6 +21,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
     QFormLayout,
+    QFrame,
     QHBoxLayout,
     QInputDialog,
     QLabel,
@@ -34,6 +35,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from . import theme
 from .app import AppService, default_vault_path
 from .models import Credential, DisplayMode, DisplayProfile, Server
 
@@ -220,43 +222,90 @@ class MainWindow(QWidget):
         super().__init__()
         self.service = service
         self.setWindowTitle("Better RDP")
-        self.resize(560, 420)
+        self.resize(720, 480)
+        self.setMinimumSize(620, 420)
 
+        # --- header ----------------------------------------------------------------
+        title = QLabel("Better RDP")
+        title.setObjectName("header")
+        subtitle = QLabel("Pick a server, a credential, and a display — then Launch.")
+        subtitle.setObjectName("subtitle")
+        header = QVBoxLayout()
+        header.setSpacing(2)
+        header.addWidget(title)
+        header.addWidget(subtitle)
+
+        # --- left: server list -----------------------------------------------------
+        servers_label = QLabel("Servers")
+        servers_label.setObjectName("sectionLabel")
         self.servers_list = QListWidget()
         self.servers_list.currentItemChanged.connect(self._on_server_changed)
 
-        self.credential_box = QComboBox()
-        self.profile_box = QComboBox()
-        self.launch_button = QPushButton("Launch")
-        self.launch_button.clicked.connect(self._on_launch)
-
-        add_server_btn = QPushButton("Add server…")
+        add_server_btn = QPushButton("+  Add server")
+        add_server_btn.setObjectName("ghost")
         add_server_btn.clicked.connect(self._add_server)
-        add_cred_btn = QPushButton("Add credential…")
-        add_cred_btn.clicked.connect(self._add_credential)
-        add_profile_btn = QPushButton("Add profile…")
-        add_profile_btn.clicked.connect(self._add_profile)
 
-        # Left: server list + its add button.
         left = QVBoxLayout()
-        left.addWidget(QLabel("Servers"))
+        left.setSpacing(8)
+        left.addWidget(servers_label)
         left.addWidget(self.servers_list, 1)
         left.addWidget(add_server_btn)
 
-        # Right: the launch form for the selected server.
-        right = QFormLayout()
-        right.addRow("Credential", self.credential_box)
-        right.addRow("Display profile", self.profile_box)
-        right_box = QVBoxLayout()
-        right_box.addLayout(right)
-        right_box.addWidget(self.launch_button)
-        right_box.addStretch(1)
-        right_box.addWidget(add_cred_btn)
-        right_box.addWidget(add_profile_btn)
+        # --- right: connection card ------------------------------------------------
+        self.credential_box = QComboBox()
+        self.profile_box = QComboBox()
+        self.launch_button = QPushButton("Launch")
+        self.launch_button.setObjectName("primary")
+        self.launch_button.setMinimumHeight(44)
+        self.launch_button.clicked.connect(self._on_launch)
 
-        root = QHBoxLayout(self)
-        root.addLayout(left, 1)
-        root.addLayout(right_box, 1)
+        add_cred_btn = QPushButton("+  Add credential")
+        add_cred_btn.setObjectName("ghost")
+        add_cred_btn.clicked.connect(self._add_credential)
+        add_profile_btn = QPushButton("+  Add profile")
+        add_profile_btn.setObjectName("ghost")
+        add_profile_btn.clicked.connect(self._add_profile)
+
+        conn_label = QLabel("Connection")
+        conn_label.setObjectName("sectionLabel")
+        form = QFormLayout()
+        form.setSpacing(10)
+        form.setContentsMargins(0, 0, 0, 0)
+        form.addRow("Credential", self.credential_box)
+        form.addRow("Display profile", self.profile_box)
+
+        divider = QFrame()
+        divider.setObjectName("divider")
+
+        manage = QHBoxLayout()
+        manage.addWidget(add_cred_btn)
+        manage.addWidget(add_profile_btn)
+
+        card_inner = QVBoxLayout()
+        card_inner.setContentsMargins(18, 18, 18, 18)
+        card_inner.setSpacing(14)
+        card_inner.addWidget(conn_label)
+        card_inner.addLayout(form)
+        card_inner.addWidget(self.launch_button)
+        card_inner.addStretch(1)
+        card_inner.addWidget(divider)
+        card_inner.addLayout(manage)
+
+        card = QFrame()
+        card.setObjectName("card")
+        card.setLayout(card_inner)
+
+        # --- assemble --------------------------------------------------------------
+        columns = QHBoxLayout()
+        columns.setSpacing(16)
+        columns.addLayout(left, 5)
+        columns.addWidget(card, 4)
+
+        root = QVBoxLayout(self)
+        root.setContentsMargins(20, 18, 20, 20)
+        root.setSpacing(16)
+        root.addLayout(header)
+        root.addLayout(columns, 1)
 
         self._reload()
 
@@ -271,8 +320,9 @@ class MainWindow(QWidget):
         current = self._selected_server_name()
         self.servers_list.clear()
         for server in self.service.servers():
-            item = QListWidgetItem(f"{server.name}  ({server.address})")
+            item = QListWidgetItem(f"{server.name}\n{server.address}")
             item.setData(Qt.UserRole, server.name)
+            item.setToolTip(server.address)
             self.servers_list.addItem(item)
             if server.name == current:
                 self.servers_list.setCurrentItem(item)
@@ -361,6 +411,8 @@ class MainWindow(QWidget):
 def run(argv: list[str] | None = None) -> int:
     """Entry point: unlock the Vault, then show the main window."""
     app = QApplication(argv if argv is not None else sys.argv)
+    app.setApplicationName("Better RDP")
+    theme.apply(app)
     service = unlock()
     if service is None:
         return 0
