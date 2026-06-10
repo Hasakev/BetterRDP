@@ -15,7 +15,7 @@ import os
 from pathlib import Path
 
 from . import dpapi
-from .models import Credential, Server
+from .models import Credential, DisplayMode, DisplayProfile, Server
 
 # Argon2id parameters. Fixed so a derived key is reproducible across runs for a given
 # (master, salt). These are interactive-login-grade, not archival-grade.
@@ -93,6 +93,7 @@ class Vault:
             "verifier": _wrap(_VERIFIER_PLAINTEXT, key),
             "credentials": [],
             "servers": [],
+            "profiles": [],
         }
         return cls(path, key, salt, data)
 
@@ -105,6 +106,8 @@ class Vault:
         # Authenticated check: a wrong key makes this raise InvalidTag, never succeed.
         if _unwrap(data["verifier"], key) != _VERIFIER_PLAINTEXT:
             raise ValueError("Master password verification failed")
+        # Tolerate vaults written before a section existed.
+        data.setdefault("profiles", [])
         return cls(path, key, salt, data)
 
     def add_credential(self, credential: Credential) -> None:
@@ -125,17 +128,78 @@ class Vault:
                 return _unwrap(entry["secret"], self._key)
         raise KeyError(credential_id)
 
+    def credentials(self) -> list[Credential]:
+        """All stored Credentials, *without* plaintext passwords (those stay encrypted on
+        disk and are only decrypted on demand via :meth:`get_password`)."""
+        return [
+            Credential(id=e["id"], username=e["username"], domain=e["domain"])
+            for e in self._data["credentials"]
+        ]
+
     def add_server(self, server: Server) -> None:
-        self._data["servers"].append(
-            {
-                "name": server.name,
-                "address": server.address,
-                "notes": server.notes,
-                "last_credential_id": server.last_credential_id,
-                "last_profile_name": server.last_profile_name,
-            }
-        )
+        self._data["servers"].append(_server_to_dict(server))
+
+    def servers(self) -> list[Server]:
+        return [_server_from_dict(e) for e in self._data["servers"]]
+
+    def update_server(self, server: Server) -> None:
+        """Replace the stored Server matching ``server.name`` (e.g. to record last-used)."""
+        for i, e in enumerate(self._data["servers"]):
+            if e["name"] == server.name:
+                self._data["servers"][i] = _server_to_dict(server)
+                return
+        raise KeyError(server.name)
+
+    def add_profile(self, profile: DisplayProfile) -> None:
+        self._data["profiles"].append(_profile_to_dict(profile))
+
+    def profiles(self) -> list[DisplayProfile]:
+        return [_profile_from_dict(e) for e in self._data["profiles"]]
 
     def save(self) -> None:
         """Persist to the JSON file on disk."""
         self._path.write_text(json.dumps(self._data, indent=2), encoding="utf-8")
+
+
+# --- (de)serialisation of the non-secret records -----------------------------------
+
+def _server_to_dict(server: Server) -> dict:
+    return {
+        "name": server.name,
+        "address": server.address,
+        "notes": server.notes,
+        "last_credential_id": server.last_credential_id,
+        "last_profile_name": server.last_profile_name,
+    }
+
+
+def _server_from_dict(e: dict) -> Server:
+    return Server(
+        name=e["name"],
+        address=e["address"],
+        notes=e.get("notes", ""),
+        last_credential_id=e.get("last_credential_id"),
+        last_profile_name=e.get("last_profile_name"),
+    )
+
+
+def _profile_to_dict(profile: DisplayProfile) -> dict:
+    return {
+        "name": profile.name,
+        "mode": profile.mode.value,
+        "monitors": profile.monitors,
+        "width": profile.width,
+        "height": profile.height,
+        "scale_factor": profile.scale_factor,
+    }
+
+
+def _profile_from_dict(e: dict) -> DisplayProfile:
+    return DisplayProfile(
+        name=e["name"],
+        mode=DisplayMode(e["mode"]),
+        monitors=list(e.get("monitors", [])),
+        width=e.get("width"),
+        height=e.get("height"),
+        scale_factor=e.get("scale_factor"),
+    )
