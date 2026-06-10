@@ -7,7 +7,10 @@ HEX is DPAPI-encrypted bytes of the UTF-16LE password — the only form mstsc un
 
 from __future__ import annotations
 
-from .models import Credential, DisplayProfile, Server
+import binascii
+
+from . import dpapi
+from .models import Credential, DisplayMode, DisplayProfile, Server
 
 
 def rdp_password_field(plaintext: str) -> str:
@@ -16,7 +19,9 @@ def rdp_password_field(plaintext: str) -> str:
     HEX is the uppercase hex of ``dpapi.protect(plaintext.encode("utf-16-le"))`` — the
     encoding mstsc expects in a saved .rdp file.
     """
-    raise NotImplementedError
+    blob = dpapi.protect(plaintext.encode("utf-16-le"))
+    hex_blob = binascii.hexlify(blob).decode("ascii").upper()
+    return f"password 51:b:{hex_blob}"
 
 
 def generate(
@@ -26,4 +31,35 @@ def generate(
     plaintext_password: str,
 ) -> str:
     """Return the full text of a `.rdp` file for this Connection."""
-    raise NotImplementedError
+    lines: list[str] = [
+        f"full address:s:{server.address}",
+        f"username:s:{credential.username}",
+    ]
+    if credential.domain:
+        lines.append(f"domain:s:{credential.domain}")
+    lines.append(rdp_password_field(plaintext_password))
+
+    if profile.mode is DisplayMode.FULLSCREEN_MULTIMON:
+        # screen mode id 2 = full screen; span the selected monitors.
+        lines.append("screen mode id:i:2")
+        lines.append("use multimon:i:1")
+        if profile.monitors:
+            lines.append("selectedmonitors:s:" + ",".join(str(m) for m in profile.monitors))
+    elif profile.mode is DisplayMode.WINDOWED_FIXED:
+        # screen mode id 1 = windowed; fixed resolution, single screen.
+        lines.append("screen mode id:i:1")
+        lines.append("use multimon:i:0")
+        if profile.width is not None:
+            lines.append(f"desktopwidth:i:{profile.width}")
+        if profile.height is not None:
+            lines.append(f"desktopheight:i:{profile.height}")
+    elif profile.mode is DisplayMode.WINDOWED_DYNAMIC:
+        # Windowed, resolution follows the window as it's resized.
+        lines.append("screen mode id:i:1")
+        lines.append("use multimon:i:0")
+        lines.append("dynamic resolution:i:1")
+
+    if profile.scale_factor is not None:
+        lines.append(f"desktopscalefactor:i:{profile.scale_factor}")
+
+    return "\n".join(lines) + "\n"

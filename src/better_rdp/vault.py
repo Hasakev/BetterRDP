@@ -9,51 +9,133 @@ imports cleanly without those packages installed (for test collection).
 
 from __future__ import annotations
 
+import base64
+import json
+import os
 from pathlib import Path
 
+from . import dpapi
 from .models import Credential, Server
+
+# Argon2id parameters. Fixed so a derived key is reproducible across runs for a given
+# (master, salt). These are interactive-login-grade, not archival-grade.
+_ARGON2_TIME_COST = 3
+_ARGON2_MEMORY_COST = 64 * 1024  # 64 MiB
+_ARGON2_PARALLELISM = 4
+_KEY_LEN = 32  # AES-256
+_SALT_LEN = 16
+_NONCE_LEN = 12
+
+# A constant sentinel encrypted under the derived key at create time. Decrypting it on
+# open is how we tell a correct Master Password from a wrong one (authenticated failure).
+_VERIFIER_PLAINTEXT = "better-rdp-verifier-v1"
 
 
 def derive_key(master: str, salt: bytes) -> bytes:
     """Derive a 32-byte key from the Master Password via Argon2id. Deterministic for a
     given (master, salt)."""
-    raise NotImplementedError
+    from argon2.low_level import Type, hash_secret_raw
+
+    return hash_secret_raw(
+        secret=master.encode("utf-8"),
+        salt=salt,
+        time_cost=_ARGON2_TIME_COST,
+        memory_cost=_ARGON2_MEMORY_COST,
+        parallelism=_ARGON2_PARALLELISM,
+        hash_len=_KEY_LEN,
+        type=Type.ID,
+    )
 
 
 def encrypt_secret(plaintext: str, key: bytes) -> bytes:
     """AES-GCM encrypt. Returns nonce || ciphertext || tag."""
-    raise NotImplementedError
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce = os.urandom(_NONCE_LEN)
+    ct = AESGCM(key).encrypt(nonce, plaintext.encode("utf-8"), None)
+    return nonce + ct
 
 
 def decrypt_secret(blob: bytes, key: bytes) -> str:
     """AES-GCM decrypt. Raises (InvalidTag) if the key is wrong — never returns garbage."""
-    raise NotImplementedError
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+    nonce, ct = blob[:_NONCE_LEN], blob[_NONCE_LEN:]
+    return AESGCM(key).decrypt(nonce, ct, None).decode("utf-8")
+
+
+def _wrap(plaintext: str, key: bytes) -> str:
+    """Inner AES-GCM then outer DPAPI, base64-encoded for JSON. See ADR 0001."""
+    return base64.b64encode(dpapi.protect(encrypt_secret(plaintext, key))).decode("ascii")
+
+
+def _unwrap(stored_b64: str, key: bytes) -> str:
+    """Reverse of :func:`_wrap`: strip DPAPI, then AES-GCM decrypt."""
+    return decrypt_secret(dpapi.unprotect(base64.b64decode(stored_b64)), key)
 
 
 class Vault:
     """Holds Servers and Credentials; persists to a JSON file with encrypted secrets."""
 
+    def __init__(self, path: Path, key: bytes, salt: bytes, data: dict) -> None:
+        self._path = Path(path)
+        self._key = key
+        self._salt = salt
+        self._data = data
+
     @classmethod
     def create(cls, path: Path, master: str) -> "Vault":
         """Create a new, empty Vault at ``path`` keyed by ``master`` (set-once for v1)."""
-        raise NotImplementedError
+        salt = os.urandom(_SALT_LEN)
+        key = derive_key(master, salt)
+        data = {
+            "kdf": {"salt": base64.b64encode(salt).decode("ascii")},
+            "verifier": _wrap(_VERIFIER_PLAINTEXT, key),
+            "credentials": [],
+            "servers": [],
+        }
+        return cls(path, key, salt, data)
 
     @classmethod
     def open(cls, path: Path, master: str) -> "Vault":
         """Open an existing Vault. Wrong master must fail loudly, not silently."""
-        raise NotImplementedError
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+        salt = base64.b64decode(data["kdf"]["salt"])
+        key = derive_key(master, salt)
+        # Authenticated check: a wrong key makes this raise InvalidTag, never succeed.
+        if _unwrap(data["verifier"], key) != _VERIFIER_PLAINTEXT:
+            raise ValueError("Master password verification failed")
+        return cls(path, key, salt, data)
 
     def add_credential(self, credential: Credential) -> None:
         """Store a Credential; its plaintext password is encrypted, never written raw."""
-        raise NotImplementedError
+        self._data["credentials"].append(
+            {
+                "id": credential.id,
+                "username": credential.username,
+                "domain": credential.domain,
+                "secret": _wrap(credential.password or "", self._key),
+            }
+        )
 
     def get_password(self, credential_id: str) -> str:
         """Decrypt and return the plaintext password for a stored Credential."""
-        raise NotImplementedError
+        for entry in self._data["credentials"]:
+            if entry["id"] == credential_id:
+                return _unwrap(entry["secret"], self._key)
+        raise KeyError(credential_id)
 
     def add_server(self, server: Server) -> None:
-        raise NotImplementedError
+        self._data["servers"].append(
+            {
+                "name": server.name,
+                "address": server.address,
+                "notes": server.notes,
+                "last_credential_id": server.last_credential_id,
+                "last_profile_name": server.last_profile_name,
+            }
+        )
 
     def save(self) -> None:
         """Persist to the JSON file on disk."""
-        raise NotImplementedError
+        self._path.write_text(json.dumps(self._data, indent=2), encoding="utf-8")
