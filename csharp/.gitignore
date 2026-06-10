@@ -1,0 +1,32 @@
+# .NET / Visual Studio build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+ARM64/
+[Bb]in/
+[Oo]bj/
+
+# Publish output
+publish/
+*.publishproj
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Test results
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+
+# Local NuGet
+*.nupkg
+packages/
