@@ -188,13 +188,18 @@ class ProfileDialog(QDialog):
         layout.addWidget(buttons)
         self._sync_visibility()
 
+    def _current_mode(self) -> DisplayMode:
+        # Qt stores combo userData via QVariant; because DisplayMode subclasses str it
+        # round-trips back as a bare str, so coerce it back to the enum here.
+        return DisplayMode(self.mode.currentData())
+
     def _sync_visibility(self):
-        mode = self.mode.currentData()
+        mode = self._current_mode()
         self._monitors_row.setVisible(mode is DisplayMode.FULLSCREEN_MULTIMON)
         self._res_row.setVisible(mode is DisplayMode.WINDOWED_FIXED)
 
     def result_profile(self) -> DisplayProfile:
-        mode = self.mode.currentData()
+        mode = self._current_mode()
         monitors = [
             b.property("monitor_id") for b in self._monitor_boxes if b.isChecked()
         ]

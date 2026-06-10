@@ -186,7 +186,9 @@ def _server_from_dict(e: dict) -> Server:
 def _profile_to_dict(profile: DisplayProfile) -> dict:
     return {
         "name": profile.name,
-        "mode": profile.mode.value,
+        # Tolerate a bare-string mode (e.g. from Qt QVariant round-tripping) as well as
+        # the DisplayMode enum.
+        "mode": DisplayMode(profile.mode).value,
         "monitors": profile.monitors,
         "width": profile.width,
         "height": profile.height,

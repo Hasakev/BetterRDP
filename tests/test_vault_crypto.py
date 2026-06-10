@@ -117,3 +117,21 @@ def test_correct_master_round_trips_credential(tmp_path):
 @requires_windows
 def test_dpapi_roundtrip():
     assert dpapi.unprotect(dpapi.protect(b"abc-123")) == b"abc-123"
+
+
+# --- 7. profile persistence tolerates a bare-string mode ---------------------------
+
+@requires_windows
+def test_add_profile_accepts_string_mode_from_qt(tmp_path):
+    """Qt hands back DisplayMode (a str subclass) as a bare str via QVariant; storing such
+    a profile must not crash on ``mode.value`` (regression for the GUI add-profile path)."""
+    from better_rdp.models import DisplayMode, DisplayProfile
+
+    path = tmp_path / "vault.json"
+    v = vault.Vault.create(path, "masterA")
+    v.add_profile(DisplayProfile(name="P", mode="fullscreen_multimon", monitors=[0]))
+    v.save()
+
+    reopened = vault.Vault.open(path, "masterA")
+    profile = reopened.profiles()[0]
+    assert profile.mode is DisplayMode.FULLSCREEN_MULTIMON
