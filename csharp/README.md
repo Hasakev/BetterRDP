@@ -1,6 +1,6 @@
 # Better RDP — C# / WinUI 3 port
 
-A native-`.exe` port of the Python launcher (`../src/better_rdp`). Same architecture: a thin
+A native-`.exe` port of the Python launcher (`../python/src/better_rdp`). Same architecture: a thin
 launcher that generates `.rdp` files and shells out to `mstsc.exe`. See `../CONTEXT.md` for the
 domain glossary and `../docs/adr/0001-credential-vault-encryption.md` for the crypto design.
 
