@@ -47,6 +47,39 @@ public sealed partial class ProfileDialog : ContentDialog
         SyncVisibility();
     }
 
+    /// <summary>Pre-fill all fields from an existing profile and switch to "edit" wording.</summary>
+    public void LoadForEdit(DisplayProfile profile)
+    {
+        Title = "Edit display profile";
+        PrimaryButtonText = "Save";
+        NameInput.Text = profile.Name;
+
+        for (int i = 0; i < ModeInput.Items.Count; i++)
+            if ((DisplayMode)((ComboBoxItem)ModeInput.Items[i]).Tag == profile.Mode)
+            {
+                ModeInput.SelectedIndex = i;
+                break;
+            }
+
+        foreach (var box in _monitorBoxes)
+            box.IsChecked = profile.Monitors.Contains((int)box.Tag);
+
+        if (profile.Width is int w) WidthInput.Value = w;
+        if (profile.Height is int h) HeightInput.Value = h;
+
+        for (int i = 0; i < ScaleInput.Items.Count; i++)
+        {
+            var tag = ((ComboBoxItem)ScaleInput.Items[i]).Tag;
+            if ((tag is int s && profile.ScaleFactor == s) || (tag is null && profile.ScaleFactor is null))
+            {
+                ScaleInput.SelectedIndex = i;
+                break;
+            }
+        }
+
+        SyncVisibility();
+    }
+
     private DisplayMode CurrentMode => (DisplayMode)((ComboBoxItem)ModeInput.SelectedItem).Tag;
 
     private void OnModeChanged(object sender, SelectionChangedEventArgs e) => SyncVisibility();

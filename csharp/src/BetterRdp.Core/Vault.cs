@@ -217,6 +217,71 @@ public sealed class Vault
     public IReadOnlyList<DisplayProfile> Profiles()
         => [.. _data.Profiles.Select(FromDto)];
 
+    // --- edit / delete -------------------------------------------------------------
+
+    /// <summary>Replace the Server matched by <paramref name="originalName"/> (rename-capable).</summary>
+    public void EditServer(string originalName, Server server)
+    {
+        for (int i = 0; i < _data.Servers.Count; i++)
+            if (_data.Servers[i].Name == originalName)
+            {
+                _data.Servers[i] = ToDto(server);
+                return;
+            }
+        throw new KeyNotFoundException(originalName);
+    }
+
+    public void RemoveServer(string name)
+    {
+        if (_data.Servers.RemoveAll(e => e.Name == name) == 0)
+            throw new KeyNotFoundException(name);
+    }
+
+    /// <summary>Replace the Credential matched by <paramref name="originalId"/>. A null
+    /// <see cref="Credential.Password"/> keeps the existing encrypted secret; a non-null one
+    /// re-encrypts.</summary>
+    public void EditCredential(string originalId, Credential credential)
+    {
+        for (int i = 0; i < _data.Credentials.Count; i++)
+            if (_data.Credentials[i].Id == originalId)
+            {
+                var existing = _data.Credentials[i];
+                _data.Credentials[i] = new CredentialDto
+                {
+                    Id = credential.Id,
+                    Username = credential.Username,
+                    Domain = credential.Domain,
+                    Secret = credential.Password is null ? existing.Secret : Wrap(credential.Password, _key),
+                };
+                return;
+            }
+        throw new KeyNotFoundException(originalId);
+    }
+
+    public void RemoveCredential(string id)
+    {
+        if (_data.Credentials.RemoveAll(e => e.Id == id) == 0)
+            throw new KeyNotFoundException(id);
+    }
+
+    /// <summary>Replace the Display Profile matched by <paramref name="originalName"/> (rename-capable).</summary>
+    public void EditProfile(string originalName, DisplayProfile profile)
+    {
+        for (int i = 0; i < _data.Profiles.Count; i++)
+            if (_data.Profiles[i].Name == originalName)
+            {
+                _data.Profiles[i] = ToDto(profile);
+                return;
+            }
+        throw new KeyNotFoundException(originalName);
+    }
+
+    public void RemoveProfile(string name)
+    {
+        if (_data.Profiles.RemoveAll(e => e.Name == name) == 0)
+            throw new KeyNotFoundException(name);
+    }
+
     /// <summary>Persist to the JSON file on disk.</summary>
     public void Save()
         => File.WriteAllText(_path, JsonSerializer.Serialize(_data, JsonOpts));

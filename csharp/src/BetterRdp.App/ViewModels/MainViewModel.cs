@@ -22,18 +22,26 @@ public partial class MainViewModel : ObservableObject
     // (CS9248). MVVMTK0045 here is an AOT-only advisory and harmless for this (non-AOT) app.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanLaunch))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedServer))]
     private Server? selectedServer;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanLaunch))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedCredential))]
     private Credential? selectedCredential;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanLaunch))]
+    [NotifyPropertyChangedFor(nameof(HasSelectedProfile))]
     private DisplayProfile? selectedProfile;
 
     /// <summary>Launch is only possible once a server, a credential and a profile are all chosen.</summary>
     public bool CanLaunch => SelectedServer is not null && SelectedCredential is not null && SelectedProfile is not null;
+
+    // Drive the enabled state of the per-section Edit/Delete buttons.
+    public bool HasSelectedServer => SelectedServer is not null;
+    public bool HasSelectedCredential => SelectedCredential is not null;
+    public bool HasSelectedProfile => SelectedProfile is not null;
 
     /// <summary>Hand the unlocked service to the view model and do the first populate.</summary>
     public void Load(AppService service)
@@ -120,6 +128,42 @@ public partial class MainViewModel : ObservableObject
     public void AddProfile(DisplayProfile profile)
     {
         _service.AddProfile(profile);
+        ReloadPickers();
+    }
+
+    public void EditServer(string originalName, Server server)
+    {
+        _service.EditServer(originalName, server);
+        ReloadServers();
+    }
+
+    public void RemoveServer(string name)
+    {
+        _service.RemoveServer(name);
+        ReloadServers();
+    }
+
+    public void EditCredential(string originalId, Credential credential)
+    {
+        _service.EditCredential(originalId, credential);
+        ReloadPickers();
+    }
+
+    public void RemoveCredential(string id)
+    {
+        _service.RemoveCredential(id);
+        ReloadPickers();
+    }
+
+    public void EditProfile(string originalName, DisplayProfile profile)
+    {
+        _service.EditProfile(originalName, profile);
+        ReloadPickers();
+    }
+
+    public void RemoveProfile(string name)
+    {
+        _service.RemoveProfile(name);
         ReloadPickers();
     }
 }

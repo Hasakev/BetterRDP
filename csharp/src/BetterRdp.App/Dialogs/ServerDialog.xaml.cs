@@ -11,6 +11,15 @@ public sealed partial class ServerDialog : ContentDialog
         InitializeComponent();
     }
 
+    /// <summary>Pre-fill the fields and switch to "edit" wording.</summary>
+    public void LoadForEdit(Server server)
+    {
+        Title = "Edit server";
+        PrimaryButtonText = "Save";
+        NameInput.Text = server.Name;
+        AddressInput.Text = server.Address;
+    }
+
     /// <summary>The entered Server, or null if either field is blank.</summary>
     public Server? Result
     {

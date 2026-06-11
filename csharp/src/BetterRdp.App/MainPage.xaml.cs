@@ -91,6 +91,74 @@ public sealed partial class MainPage : Page
             ViewModel.AddProfile(profile);
     }
 
+    private async void OnEditServer(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedServer is not { } server)
+            return;
+        var dialog = new ServerDialog { XamlRoot = XamlRoot };
+        dialog.LoadForEdit(server);
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && dialog.Result is { } updated)
+            ViewModel.EditServer(server.Name, updated);
+    }
+
+    private async void OnDeleteServer(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedServer is not { } server)
+            return;
+        if (await ConfirmDeleteAsync("server", server.Name))
+            ViewModel.RemoveServer(server.Name);
+    }
+
+    private async void OnEditCredential(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedCredential is not { } cred)
+            return;
+        var dialog = new CredentialDialog { XamlRoot = XamlRoot };
+        dialog.LoadForEdit(cred);
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && dialog.Result is { } updated)
+            ViewModel.EditCredential(cred.Id, updated);
+    }
+
+    private async void OnDeleteCredential(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedCredential is not { } cred)
+            return;
+        if (await ConfirmDeleteAsync("credential", cred.Id))
+            ViewModel.RemoveCredential(cred.Id);
+    }
+
+    private async void OnEditProfile(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedProfile is not { } profile)
+            return;
+        var dialog = new ProfileDialog { XamlRoot = XamlRoot };
+        dialog.LoadForEdit(profile);
+        if (await dialog.ShowAsync() == ContentDialogResult.Primary && dialog.Result is { } updated)
+            ViewModel.EditProfile(profile.Name, updated);
+    }
+
+    private async void OnDeleteProfile(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedProfile is not { } profile)
+            return;
+        if (await ConfirmDeleteAsync("display profile", profile.Name))
+            ViewModel.RemoveProfile(profile.Name);
+    }
+
+    private async Task<bool> ConfirmDeleteAsync(string kind, string name)
+    {
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot,
+            Title = $"Delete {kind}?",
+            Content = $"“{name}” will be removed. This can't be undone.",
+            PrimaryButtonText = "Delete",
+            CloseButtonText = "Cancel",
+            DefaultButton = ContentDialogButton.Close,
+        };
+        return await dialog.ShowAsync() == ContentDialogResult.Primary;
+    }
+
     private Task ShowMessageAsync(string title, string message)
         => new ContentDialog
         {

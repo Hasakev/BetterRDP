@@ -62,11 +62,32 @@
                     </ListView.ItemTemplate>
                 </ListView>
 
-                <Button
-                    Grid.Row="2"
-                    Content="+  Add server"
-                    HorizontalAlignment="Stretch"
-                    Click="OnAddServer" />
+                <Grid Grid.Row="2" ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Button
+                        Grid.Column="0"
+                        Content="+  Add server"
+                        HorizontalAlignment="Stretch"
+                        Click="OnAddServer" />
+                    <Button
+                        Grid.Column="1"
+                        ToolTipService.ToolTip="Edit server"
+                        IsEnabled="{x:Bind ViewModel.HasSelectedServer, Mode=OneWay}"
+                        Click="OnEditServer">
+                        <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                    </Button>
+                    <Button
+                        Grid.Column="2"
+                        ToolTipService.ToolTip="Delete server"
+                        IsEnabled="{x:Bind ViewModel.HasSelectedServer, Mode=OneWay}"
+                        Click="OnDeleteServer">
+                        <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                    </Button>
+                </Grid>
             </Grid>
 
             <!-- Right: connection card -->
@@ -90,21 +111,67 @@
 
                     <TextBlock Grid.Row="0" Text="Connection" Style="{ThemeResource BodyStrongTextBlockStyle}" />
 
-                    <ComboBox
-                        Grid.Row="1"
-                        Header="Credential"
-                        HorizontalAlignment="Stretch"
-                        ItemsSource="{x:Bind ViewModel.Credentials}"
-                        SelectedItem="{x:Bind ViewModel.SelectedCredential, Mode=TwoWay}"
-                        DisplayMemberPath="Id" />
+                    <Grid Grid.Row="1" ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox
+                            Grid.Column="0"
+                            Header="Credential"
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{x:Bind ViewModel.Credentials}"
+                            SelectedItem="{x:Bind ViewModel.SelectedCredential, Mode=TwoWay}"
+                            DisplayMemberPath="Id" />
+                        <Button
+                            Grid.Column="1"
+                            VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Edit credential"
+                            IsEnabled="{x:Bind ViewModel.HasSelectedCredential, Mode=OneWay}"
+                            Click="OnEditCredential">
+                            <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                        </Button>
+                        <Button
+                            Grid.Column="2"
+                            VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Delete credential"
+                            IsEnabled="{x:Bind ViewModel.HasSelectedCredential, Mode=OneWay}"
+                            Click="OnDeleteCredential">
+                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                        </Button>
+                    </Grid>
 
-                    <ComboBox
-                        Grid.Row="2"
-                        Header="Display profile"
-                        HorizontalAlignment="Stretch"
-                        ItemsSource="{x:Bind ViewModel.Profiles}"
-                        SelectedItem="{x:Bind ViewModel.SelectedProfile, Mode=TwoWay}"
-                        DisplayMemberPath="Name" />
+                    <Grid Grid.Row="2" ColumnSpacing="4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox
+                            Grid.Column="0"
+                            Header="Display profile"
+                            HorizontalAlignment="Stretch"
+                            ItemsSource="{x:Bind ViewModel.Profiles}"
+                            SelectedItem="{x:Bind ViewModel.SelectedProfile, Mode=TwoWay}"
+                            DisplayMemberPath="Name" />
+                        <Button
+                            Grid.Column="1"
+                            VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Edit profile"
+                            IsEnabled="{x:Bind ViewModel.HasSelectedProfile, Mode=OneWay}"
+                            Click="OnEditProfile">
+                            <FontIcon Glyph="&#xE70F;" FontSize="14" />
+                        </Button>
+                        <Button
+                            Grid.Column="2"
+                            VerticalAlignment="Bottom"
+                            ToolTipService.ToolTip="Delete profile"
+                            IsEnabled="{x:Bind ViewModel.HasSelectedProfile, Mode=OneWay}"
+                            Click="OnDeleteProfile">
+                            <FontIcon Glyph="&#xE74D;" FontSize="14" />
+                        </Button>
+                    </Grid>
 
                     <Button
                         Grid.Row="3"

@@ -59,6 +59,44 @@ public sealed class AppService
         _vault.Save();
     }
 
+    public void EditServer(string originalName, Server server)
+    {
+        _vault.EditServer(originalName, server);
+        _vault.Save();
+    }
+
+    public void RemoveServer(string name)
+    {
+        _vault.RemoveServer(name);
+        _vault.Save();
+    }
+
+    /// <summary>Edit a Credential. A null password on <paramref name="credential"/> keeps the
+    /// stored secret; a non-null one replaces it.</summary>
+    public void EditCredential(string originalId, Credential credential)
+    {
+        _vault.EditCredential(originalId, credential);
+        _vault.Save();
+    }
+
+    public void RemoveCredential(string id)
+    {
+        _vault.RemoveCredential(id);
+        _vault.Save();
+    }
+
+    public void EditProfile(string originalName, DisplayProfile profile)
+    {
+        _vault.EditProfile(originalName, profile);
+        _vault.Save();
+    }
+
+    public void RemoveProfile(string name)
+    {
+        _vault.RemoveProfile(name);
+        _vault.Save();
+    }
+
     public void Save() => _vault.Save();
 
     /// <summary>Launch a Connection: decrypt the Credential, generate + run a temp .rdp,
