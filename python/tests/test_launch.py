@@ -71,3 +71,50 @@ def test_launch_returns_runner_result(conn):
     sentinel = object()
     result = launch.launch(server, cred, profile, "pw", runner=lambda argv: sentinel)
     assert result is sentinel
+
+
+def test_launch_signs_rdp_before_mstsc_when_thumbprint_configured(conn):
+    server, cred, profile = conn
+    seen = {}
+
+    def signer(argv):
+        seen["signer_argv"] = list(argv)
+        with open(argv[3], "a", encoding="utf-8") as f:
+            f.write("signature:s:test-signature\n")
+        return 0
+
+    def runner(argv):
+        seen["runner_argv"] = list(argv)
+        with open(argv[1], encoding="utf-8") as f:
+            seen["mstsc_input"] = f.read()
+        return 0
+
+    launch.launch(
+        server,
+        cred,
+        profile,
+        "pw",
+        runner=runner,
+        signer=signer,
+        rdpsign="rdpsign.exe",
+        rdpsign_sha256="AA BB CC",
+    )
+
+    assert seen["signer_argv"][:3] == ["rdpsign.exe", "/sha256", "AABBCC"]
+    assert seen["signer_argv"][3] == seen["runner_argv"][1]
+    assert "signature:s:test-signature" in seen["mstsc_input"]
+
+
+def test_temp_rdp_is_deleted_even_if_signer_raises(conn):
+    server, cred, profile = conn
+    captured = {}
+
+    def signer(argv):
+        captured["path"] = argv[3]
+        raise RuntimeError("rdpsign failed")
+
+    with pytest.raises(RuntimeError):
+        launch.launch(server, cred, profile, "pw", signer=signer, rdpsign_sha256="AABBCC")
+
+    assert "path" in captured
+    assert not os.path.exists(captured["path"])

@@ -11,8 +11,14 @@ namespace BetterRdp.Core;
 /// Replaces Python's <c>Runner</c> callable.</summary>
 public delegate object MstscRunner(IReadOnlyList<string> argv);
 
+/// <summary>Takes the rdpsign argv list. Injectable so tests can assert signing happens
+/// before mstsc sees the file without requiring a local code-signing certificate.</summary>
+public delegate object RdpSigner(IReadOnlyList<string> argv);
+
 public static class Launcher
 {
+    public const string SignCertEnv = "BETTER_RDP_SIGN_SHA256";
+
     /// <summary>Spawn mstsc and wait for it. mstsc reads the .rdp at startup, so once it
     /// returns we are safe to delete the temp file.</summary>
     private static object DefaultRunner(IReadOnlyList<string> argv)
@@ -29,11 +35,36 @@ public static class Launcher
         return proc.ExitCode;
     }
 
+    private static object DefaultSigner(IReadOnlyList<string> argv)
+    {
+        var psi = new System.Diagnostics.ProcessStartInfo(argv[0])
+        {
+            UseShellExecute = false,
+        };
+        for (int i = 1; i < argv.Count; i++)
+            psi.ArgumentList.Add(argv[i]);
+        var proc = System.Diagnostics.Process.Start(psi)
+                   ?? throw new InvalidOperationException($"Failed to start {argv[0]}");
+        proc.WaitForExit();
+        if (proc.ExitCode != 0)
+            throw new InvalidOperationException($"{argv[0]} failed with exit code {proc.ExitCode}");
+        return proc.ExitCode;
+    }
+
+    private static string NormaliseThumbprint(string thumbprint) =>
+        string.Concat(thumbprint.Where(c => !char.IsWhiteSpace(c)));
+
     /// <summary>
-    /// Write a temp .rdp for this Connection, invoke <c>runner([mstsc, rdpPath])</c>, then
-    /// delete the temp file (even if the runner throws). Returns the runner's result.
-    /// <paramref name="runner"/> defaults to real <see cref="System.Diagnostics.Process"/>
-    /// execution; tests inject a fake.
+    /// Write a temp .rdp for this Connection, optionally sign it with rdpsign.exe, invoke
+    /// <c>runner([mstsc, rdpPath])</c>, then delete the temp file (even if the runner
+    /// throws). Returns the runner's result. <paramref name="runner"/> defaults to real
+    /// <see cref="System.Diagnostics.Process"/> execution; tests inject a fake.
+    ///
+    /// If <paramref name="rdpsignSha256"/> (or environment variable
+    /// <c>BETTER_RDP_SIGN_SHA256</c>) is set, the temp .rdp is signed with
+    /// <c>rdpsign.exe /sha256 &lt;thumbprint&gt;</c> before mstsc sees it. A signed .rdp lets
+    /// mstsc verify and display the Publisher instead of showing the unknown-publisher
+    /// prompt.
     /// </summary>
     public static object Launch(
         Server server,
@@ -41,15 +72,22 @@ public static class Launcher
         DisplayProfile profile,
         string plaintextPassword,
         MstscRunner? runner = null,
-        string mstsc = "mstsc.exe")
+        string mstsc = "mstsc.exe",
+        RdpSigner? signer = null,
+        string rdpsign = "rdpsign.exe",
+        string? rdpsignSha256 = null)
     {
         runner ??= DefaultRunner;
+        signer ??= DefaultSigner;
+        rdpsignSha256 ??= Environment.GetEnvironmentVariable(SignCertEnv);
 
         var text = Rdp.Generate(server, credential, profile, plaintextPassword);
         var path = Path.Combine(Path.GetTempPath(), $"better_rdp_{Guid.NewGuid():N}.rdp");
         try
         {
             File.WriteAllText(path, text);
+            if (!string.IsNullOrWhiteSpace(rdpsignSha256))
+                signer([rdpsign, "/sha256", NormaliseThumbprint(rdpsignSha256), path]);
             return runner([mstsc, path]);
         }
         finally

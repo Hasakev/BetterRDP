@@ -32,6 +32,20 @@ bound to the current user. Generate that field, write a temp `.rdp`, launch `mst
 the file. No password prompt. See the ADR for how the at-rest vault adds a master-password
 layer on top.
 
+## Verified `.rdp` publisher
+
+Windows shows **"Unknown remote connection / Unknown publisher"** for unsigned `.rdp`
+files, especially when local resources such as clipboard or printers are redirected. To
+prevent that prompt, configure a trusted certificate thumbprint and Better RDP signs each
+temp `.rdp` with `rdpsign.exe` before launching `mstsc`:
+
+```pwsh
+$env:BETTER_RDP_SIGN_SHA256 = "<certificate SHA-256 thumbprint>"
+```
+
+The certificate must be in the current user's certificate store and trusted for signing;
+then `mstsc` can verify the file and display the certificate subject as the Publisher.
+
 ## Quick start
 
 **Python:**

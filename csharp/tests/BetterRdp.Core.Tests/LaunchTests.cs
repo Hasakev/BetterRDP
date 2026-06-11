@@ -73,4 +73,66 @@ public class LaunchTests
         var result = Launcher.Launch(server, cred, profile, "pw", _ => sentinel);
         Assert.Same(sentinel, result);
     }
+
+    [Fact]
+    public void Launch_signs_rdp_before_mstsc_when_thumbprint_configured()
+    {
+        var (server, cred, profile) = Conn();
+        string[] signerArgv = [];
+        string[] runnerArgv = [];
+        string mstscInput = "";
+
+        object Signer(IReadOnlyList<string> a)
+        {
+            signerArgv = [.. a];
+            File.AppendAllText(a[3], "signature:s:test-signature\n");
+            return 0;
+        }
+
+        object Runner(IReadOnlyList<string> a)
+        {
+            runnerArgv = [.. a];
+            mstscInput = File.ReadAllText(a[1]);
+            return 0;
+        }
+
+        Launcher.Launch(
+            server,
+            cred,
+            profile,
+            "pw",
+            Runner,
+            "mstsc.exe",
+            Signer,
+            "rdpsign.exe",
+            "AA BB CC");
+
+        Assert.Equal(new[] { "rdpsign.exe", "/sha256", "AABBCC" }, signerArgv[..3]);
+        Assert.Equal(signerArgv[3], runnerArgv[1]);
+        Assert.Contains("signature:s:test-signature", mstscInput);
+    }
+
+    [Fact]
+    public void Temp_rdp_is_deleted_even_if_signer_raises()
+    {
+        var (server, cred, profile) = Conn();
+        string? path = null;
+
+        object Signer(IReadOnlyList<string> a)
+        {
+            path = a[3];
+            throw new InvalidOperationException("rdpsign failed");
+        }
+
+        Assert.Throws<InvalidOperationException>(() => Launcher.Launch(
+            server,
+            cred,
+            profile,
+            "pw",
+            signer: Signer,
+            rdpsignSha256: "AABBCC"));
+
+        Assert.NotNull(path);
+        Assert.False(File.Exists(path));
+    }
 }
