@@ -19,7 +19,8 @@ from .models import Credential, DisplayProfile, Server
 Runner = Callable[[Sequence[str]], object]
 Signer = Callable[[Sequence[str]], object]
 
-SIGN_CERT_ENV = "BETTER_RDP_SIGN_SHA256"
+SIGN_THUMBPRINT_ENV = "BETTER_RDP_SIGN_THUMBPRINT"
+LEGACY_SIGN_CERT_ENV = "BETTER_RDP_SIGN_SHA256"
 
 
 def _default_runner(argv: Sequence[str]) -> object:
@@ -33,14 +34,18 @@ def _default_signer(argv: Sequence[str]) -> object:
 
     A signed .rdp lets mstsc verify and display the Publisher instead of showing the
     "Unknown remote connection / Unknown publisher" warning. The configured certificate
-    must be trusted by Windows and available to the current user by SHA-256 thumbprint.
+    must be trusted by Windows and available to the current user by certificate thumbprint.
     """
-    return subprocess.run(list(argv), check=True)
+    return subprocess.run(list(argv), check=True, capture_output=True, text=True)
 
 
 def _normalise_thumbprint(thumbprint: str) -> str:
     """Accept thumbprints copied with spaces and return the form rdpsign expects."""
     return "".join(thumbprint.split())
+
+
+def _configured_signing_thumbprint() -> str | None:
+    return os.environ.get(SIGN_THUMBPRINT_ENV) or os.environ.get(LEGACY_SIGN_CERT_ENV)
 
 
 def launch(
@@ -60,15 +65,17 @@ def launch(
 
     ``runner`` defaults to ``subprocess.run``-style execution; tests inject a fake.
 
-    If ``rdpsign_sha256`` (or environment variable ``BETTER_RDP_SIGN_SHA256``) is set, the
-    temp .rdp is signed with ``rdpsign.exe /sha256 <thumbprint>`` before mstsc sees it.
-    That verifies the .rdp publisher and prevents mstsc's unknown-publisher prompt.
+    If ``rdpsign_sha256`` (or environment variable ``BETTER_RDP_SIGN_THUMBPRINT``) is set,
+    the temp .rdp is signed with ``rdpsign.exe /sha256 <thumbprint>`` before mstsc sees it.
+    Despite the rdpsign switch name, Windows expects the certificate's normal SHA-1
+    thumbprint here. That verifies the .rdp publisher and prevents mstsc's
+    unknown-publisher prompt when the signing certificate is trusted by Windows.
     """
     if runner is None:
         runner = _default_runner
     if signer is None:
         signer = _default_signer
-    rdpsign_sha256 = rdpsign_sha256 or os.environ.get(SIGN_CERT_ENV)
+    rdpsign_sha256 = rdpsign_sha256 or _configured_signing_thumbprint()
 
     text = rdp.generate(server, credential, profile, plaintext_password)
     fd, path = tempfile.mkstemp(suffix=".rdp", prefix="better_rdp_")
@@ -77,6 +84,9 @@ def launch(
             f.write(text)
         if rdpsign_sha256:
             signer([rdpsign, "/sha256", _normalise_thumbprint(rdpsign_sha256), path])
+            with open(path, encoding="utf-8") as f:
+                if not any(line.lower().startswith("signature:s:") for line in f):
+                    raise RuntimeError("rdpsign completed but the .rdp file does not contain a signature")
         return runner([mstsc, path])
     finally:
         # The temp .rdp carries a usable DPAPI password blob — delete it promptly.

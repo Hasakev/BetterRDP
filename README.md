@@ -40,11 +40,14 @@ prevent that prompt, configure a trusted certificate thumbprint and Better RDP s
 temp `.rdp` with `rdpsign.exe` before launching `mstsc`:
 
 ```pwsh
-$env:BETTER_RDP_SIGN_SHA256 = "<certificate SHA-256 thumbprint>"
+$env:BETTER_RDP_SIGN_THUMBPRINT = "<certificate SHA-1 thumbprint>"
 ```
 
-The certificate must be in the current user's certificate store and trusted for signing;
-then `mstsc` can verify the file and display the certificate subject as the Publisher.
+Despite the `rdpsign.exe /sha256` switch name, Windows expects the certificate's normal
+SHA-1 thumbprint here. The certificate must be in the current user's Personal store with a
+private key and must chain to a trusted root (for a self-signed test cert, install it into
+Trusted Root Certification Authorities / Trusted Publishers). Then `mstsc` can verify the
+file and display the certificate subject as the Publisher.
 
 ## Quick start
 
