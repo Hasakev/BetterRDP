@@ -12,14 +12,14 @@ domain glossary and `../docs/adr/0001-credential-vault-encryption.md` for the cr
 | `tests/BetterRdp.Core.Tests` | xUnit port of the Python contract suite (24 tests). |
 | `src/BetterRdp.App` | WinUI 3 (Windows App SDK) shell. Talks only to `AppService`. |
 
-## Status: test-first scaffold
+## Status: core green, WinUI shell pending
 
-The core is **skeletons that throw `NotImplementedException`**, with the 24 contract tests
-written and **cleanly red** — the same red-green approach used for the Python build. The WinUI
-app is the unmodified MVVM template (placeholder), wired to reference the core.
+The `Core` is **fully implemented and all 24 contract tests pass** — built red-first, the
+same approach used for the Python build. Implementation order was Dpapi → VaultCrypto/Vault
+→ Rdp → Launcher → AppService. The WinUI app is still the MVVM template placeholder, wired
+to reference the core.
 
-Next: implement `Core` to green (Dpapi → VaultCrypto/Vault → Rdp → Launcher → AppService),
-then build the real WinUI shell over it.
+Next: build the real WinUI shell (unlock → server list → connection launch) over `AppService`.
 
 ## Build & test
 

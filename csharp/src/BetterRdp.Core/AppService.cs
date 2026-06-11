@@ -9,39 +9,79 @@ namespace BetterRdp.Core;
 
 public sealed class AppService
 {
+    private readonly Vault _vault;
+
+    private AppService(Vault vault) => _vault = vault;
+
     /// <summary>Default vault location: <c>%APPDATA%/BetterRDP/vault.json</c>.</summary>
     public static string DefaultVaultPath()
-        => throw new NotImplementedException();
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        if (string.IsNullOrEmpty(appData))
+            appData = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        return Path.Combine(appData, "BetterRDP", "vault.json");
+    }
 
     /// <summary>Open the Vault at <paramref name="path"/> if it exists, else create a fresh
     /// one keyed by <paramref name="master"/>. Opening with the wrong master fails loudly.</summary>
     public static AppService OpenOrCreate(string path, string master)
-        => throw new NotImplementedException();
+    {
+        if (File.Exists(path))
+            return new AppService(Vault.Open(path, master));
+        var dir = Path.GetDirectoryName(path);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+        return new AppService(Vault.Create(path, master));
+    }
 
-    public IReadOnlyList<Server> Servers()
-        => throw new NotImplementedException();
+    public IReadOnlyList<Server> Servers() => _vault.Servers();
 
     /// <summary>Credentials without plaintext passwords — safe to hold in the UI layer.</summary>
-    public IReadOnlyList<Credential> Credentials()
-        => throw new NotImplementedException();
+    public IReadOnlyList<Credential> Credentials() => _vault.Credentials();
 
-    public IReadOnlyList<DisplayProfile> Profiles()
-        => throw new NotImplementedException();
+    public IReadOnlyList<DisplayProfile> Profiles() => _vault.Profiles();
 
     public void AddServer(Server server)
-        => throw new NotImplementedException();
+    {
+        _vault.AddServer(server);
+        _vault.Save();
+    }
 
     public void AddCredential(Credential credential)
-        => throw new NotImplementedException();
+    {
+        _vault.AddCredential(credential);
+        _vault.Save();
+    }
 
     public void AddProfile(DisplayProfile profile)
-        => throw new NotImplementedException();
+    {
+        _vault.AddProfile(profile);
+        _vault.Save();
+    }
 
-    public void Save()
-        => throw new NotImplementedException();
+    public void Save() => _vault.Save();
 
     /// <summary>Launch a Connection: decrypt the Credential, generate + run a temp .rdp,
     /// then record this Credential/Profile as the Server's new defaults.</summary>
     public object Launch(string serverName, string credentialId, string profileName, MstscRunner? runner = null)
-        => throw new NotImplementedException();
+    {
+        var server = Servers().FirstOrDefault(s => s.Name == serverName)
+                     ?? throw new KeyNotFoundException($"name={serverName}");
+        var profile = Profiles().FirstOrDefault(p => p.Name == profileName)
+                      ?? throw new KeyNotFoundException($"name={profileName}");
+        var listed = Credentials().FirstOrDefault(c => c.Id == credentialId)
+                     ?? throw new KeyNotFoundException($"id={credentialId}");
+
+        // Re-attach the decrypted password just for this launch.
+        var password = _vault.GetPassword(credentialId);
+        var cred = listed with { Password = password };
+
+        var result = Launcher.Launch(server, cred, profile, password, runner);
+
+        server.LastCredentialId = credentialId;
+        server.LastProfileName = profileName;
+        _vault.UpdateServer(server);
+        _vault.Save();
+        return result;
+    }
 }
