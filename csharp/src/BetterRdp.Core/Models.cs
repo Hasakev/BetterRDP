@@ -20,10 +20,13 @@ public enum DisplayMode
 public sealed record Credential(string Id, string Username, string? Domain = null, string? Password = null);
 
 /// <summary>A named, reusable display layout selected at launch. See CONTEXT.md.</summary>
+// Note: properties are init-only with defaults rather than `required` — the WinUI XAML
+// type-info generator emits a parameterless activator for every data-bound type, which
+// `required` members forbid. Construction sites still set Name/Mode via initializers.
 public sealed record DisplayProfile
 {
-    public required string Name { get; init; }
-    public required DisplayMode Mode { get; init; }
+    public string Name { get; init; } = "";
+    public DisplayMode Mode { get; init; }
     public IReadOnlyList<int> Monitors { get; init; } = [];   // selected mstsc monitor ids
     public int? Width { get; init; }
     public int? Height { get; init; }
@@ -33,8 +36,8 @@ public sealed record DisplayProfile
 /// <summary>A remote host you connect to. See CONTEXT.md.</summary>
 public sealed record Server
 {
-    public required string Name { get; init; }
-    public required string Address { get; init; }
+    public string Name { get; init; } = "";
+    public string Address { get; init; } = "";
     public string Notes { get; init; } = "";
     // Mutated when a Connection is launched, to remember per-Server defaults.
     public string? LastCredentialId { get; set; }

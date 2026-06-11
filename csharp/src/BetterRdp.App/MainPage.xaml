@@ -3,28 +3,139 @@
     x:Class="BetterRdp_App.MainPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:core="using:BetterRdp.Core"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:local="using:BetterRdp_App"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="16">
-        <TextBlock
-            Text="{x:Bind ViewModel.Greeting, Mode=OneWay}"
-            Style="{StaticResource TitleTextBlockStyle}" />
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-            <Button Command="{x:Bind ViewModel.IncrementCommand}">
-                <FontIcon Glyph="&#xE710;" FontSize="14" />
-            </Button>
+    <Grid Padding="24,16,24,24" RowSpacing="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Spacing="2">
+            <TextBlock Text="Better RDP" Style="{ThemeResource TitleLargeTextBlockStyle}" />
             <TextBlock
-                Text="{x:Bind ViewModel.Counter, Mode=OneWay}"
-                VerticalAlignment="Center"
-                MinWidth="40"
-                TextAlignment="Center"
-                Style="{StaticResource BodyStrongTextBlockStyle}" />
-            <Button Command="{x:Bind ViewModel.DecrementCommand}">
-                <FontIcon Glyph="&#xE738;" FontSize="14" />
-            </Button>
+                Text="Pick a server, a credential, and a display — then Launch."
+                Style="{ThemeResource BodyTextBlockStyle}"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
         </StackPanel>
-    </StackPanel>
+
+        <!-- Body: server list (left) + connection card (right) -->
+        <Grid Grid.Row="1" ColumnSpacing="16">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="5*" />
+                <ColumnDefinition Width="4*" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Left: servers -->
+            <Grid Grid.Column="0" RowSpacing="8">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0" Text="Servers" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+
+                <ListView
+                    Grid.Row="1"
+                    x:Name="ServersList"
+                    ItemsSource="{x:Bind ViewModel.Servers}"
+                    SelectedItem="{x:Bind ViewModel.SelectedServer, Mode=TwoWay}"
+                    Background="{ThemeResource LayerFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                    BorderThickness="1"
+                    CornerRadius="8">
+                    <ListView.ItemTemplate>
+                        <DataTemplate x:DataType="core:Server">
+                            <StackPanel Spacing="2" Padding="4,8">
+                                <TextBlock Text="{x:Bind Name}" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+                                <TextBlock
+                                    Text="{x:Bind Address}"
+                                    Style="{ThemeResource CaptionTextBlockStyle}"
+                                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
+
+                <Button
+                    Grid.Row="2"
+                    Content="+  Add server"
+                    HorizontalAlignment="Stretch"
+                    Click="OnAddServer" />
+            </Grid>
+
+            <!-- Right: connection card -->
+            <Border
+                Grid.Column="1"
+                Background="{ThemeResource LayerFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="18">
+                <Grid RowSpacing="14">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Grid.Row="0" Text="Connection" Style="{ThemeResource BodyStrongTextBlockStyle}" />
+
+                    <ComboBox
+                        Grid.Row="1"
+                        Header="Credential"
+                        HorizontalAlignment="Stretch"
+                        ItemsSource="{x:Bind ViewModel.Credentials}"
+                        SelectedItem="{x:Bind ViewModel.SelectedCredential, Mode=TwoWay}"
+                        DisplayMemberPath="Id" />
+
+                    <ComboBox
+                        Grid.Row="2"
+                        Header="Display profile"
+                        HorizontalAlignment="Stretch"
+                        ItemsSource="{x:Bind ViewModel.Profiles}"
+                        SelectedItem="{x:Bind ViewModel.SelectedProfile, Mode=TwoWay}"
+                        DisplayMemberPath="Name" />
+
+                    <Button
+                        Grid.Row="3"
+                        x:Name="LaunchButton"
+                        Content="Launch"
+                        Style="{ThemeResource AccentButtonStyle}"
+                        HorizontalAlignment="Stretch"
+                        Height="44"
+                        IsEnabled="{x:Bind ViewModel.CanLaunch, Mode=OneWay}"
+                        Click="OnLaunch" />
+
+                    <TextBlock
+                        Grid.Row="4"
+                        x:Name="StatusText"
+                        VerticalAlignment="Bottom"
+                        TextWrapping="Wrap"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Style="{ThemeResource CaptionTextBlockStyle}" />
+
+                    <Border Grid.Row="5" Height="1" Background="{ThemeResource DividerStrokeColorDefaultBrush}" Margin="0,4" />
+
+                    <Grid Grid.Row="6" ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Button Grid.Column="0" Content="+  Credential" HorizontalAlignment="Stretch" Click="OnAddCredential" />
+                        <Button Grid.Column="1" Content="+  Profile" HorizontalAlignment="Stretch" Click="OnAddProfile" />
+                    </Grid>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
 </Page>
