@@ -4,6 +4,10 @@
     <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>BetterRdp_App</RootNamespace>
+    <!-- Run as a plain unpackaged .exe (no MSIX identity, no Developer Mode needed).
+         This is the project's stated target: an application-based exe. -->
+    <WindowsPackageType>None</WindowsPackageType>
+    <EnableWinAppRunSupport>false</EnableWinAppRunSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
