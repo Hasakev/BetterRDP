@@ -69,6 +69,17 @@ See each folder's `README.md` for details.
 ## Changing the logo
 
 The header logo is [`csharp/src/BetterRdp.App/Assets/AppLogo.png`](csharp/src/BetterRdp.App/Assets/AppLogo.png).
-Replace that file with your PNG (preferably square or near-square with a transparent
-background), keep the filename, then rebuild the app. It appears at 42 × 42 pixels in the
-header. The PNG you supplied is already installed there.
+Replace that file with your PNG, keep the filename, then rebuild. It appears at 42 × 42
+pixels in the header. Use a square image of at least 256 × 256 with a transparent
+background — the taskbar icon is generated from it and cannot be sharper than the source.
+
+The taskbar and Explorer icon is `Assets/AppIcon.ico`, embedded in the `.exe` via
+`<ApplicationIcon>`. After changing the logo, regenerate it:
+
+```pwsh
+python -c "from PIL import Image; s=Image.open('csharp/src/BetterRdp.App/Assets/AppLogo.png').convert('RGBA'); n=max(s.size); c=Image.new('RGBA',(n,n),(0,0,0,0)); c.paste(s,((n-s.width)//2,(n-s.height)//2)); c.resize((256,256),Image.LANCZOS).save('csharp/src/BetterRdp.App/Assets/AppIcon.ico',sizes=[(16,16),(32,32),(48,48),(64,64),(128,128),(256,256)])"
+```
+
+Both files are read from disk at runtime, so they carry `CopyToPublishDirectory` in the
+`.csproj`. Without it they reach `bin/` but are dropped by `dotnet publish`, and the
+shipped build silently falls back to no logo and the stock icon.

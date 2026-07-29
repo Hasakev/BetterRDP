@@ -9,6 +9,10 @@
     <WindowsPackageType>None</WindowsPackageType>
     <EnableWinAppRunSupport>false</EnableWinAppRunSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Embeds the Win32 icon resource in the .exe: this is what Explorer and the
+         taskbar use before the window exists. AppWindow.SetIcon only retitles a
+         live window, so both are needed. -->
+    <ApplicationIcon>Assets\AppIcon.ico</ApplicationIcon>
     <Platforms>x86;x64;ARM64</Platforms>
     <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-$([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture.ToString().ToLowerInvariant())</RuntimeIdentifier>
     <PublishProfile Condition="Exists('Properties\PublishProfiles\win-$(Platform).pubxml')">win-$(Platform).pubxml</PublishProfile>
@@ -28,7 +32,7 @@
     <Content Include="Assets\Square44x44Logo.targetsize-24_altform-unplated.png" />
     <Content Include="Assets\Square44x44Logo.targetsize-48_altform-lightunplated.png" />
     <Content Include="Assets\StoreLogo.png" />
-    <Content Include="Assets\AppIcon.ico" />
+    <Content Include="Assets\AppIcon.ico" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
     <!-- Publish needs the real file on disk: the .pri only indexes resource names, so
          ms-appx:///Assets/AppLogo.png resolves against the app folder at runtime. -->
