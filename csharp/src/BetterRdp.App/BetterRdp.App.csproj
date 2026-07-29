@@ -30,7 +30,9 @@
     <Content Include="Assets\StoreLogo.png" />
     <Content Include="Assets\AppIcon.ico" />
     <Content Include="Assets\Wide310x150Logo.scale-200.png" />
-    <Content Include="Assets\AppLogo.png" />
+    <!-- Publish needs the real file on disk: the .pri only indexes resource names, so
+         ms-appx:///Assets/AppLogo.png resolves against the app folder at runtime. -->
+    <Content Include="Assets\AppLogo.png" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
