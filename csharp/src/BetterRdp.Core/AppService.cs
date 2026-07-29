@@ -71,6 +71,18 @@ public sealed class AppService
         _vault.Save();
     }
 
+    public void MoveServer(string name, int offset)
+    {
+        _vault.MoveServer(name, offset);
+        _vault.Save();
+    }
+
+    public void ChangeMasterPassword(string currentMaster, string newMaster)
+    {
+        _vault.ChangeMasterPassword(currentMaster, newMaster);
+        _vault.Save();
+    }
+
     /// <summary>Edit a Credential. A null password on <paramref name="credential"/> keeps the
     /// stored secret; a non-null one replaces it.</summary>
     public void EditCredential(string originalId, Credential credential)

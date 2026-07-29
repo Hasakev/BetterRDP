@@ -127,7 +127,7 @@ public sealed class Vault
     };
 
     private readonly string _path;
-    private readonly byte[] _key;
+    private byte[] _key;
     private readonly VaultData _data;
 
     private Vault(string path, byte[] key, VaultData data)
@@ -235,6 +235,45 @@ public sealed class Vault
     {
         if (_data.Servers.RemoveAll(e => e.Name == name) == 0)
             throw new KeyNotFoundException(name);
+    }
+
+    /// <summary>Move a Server one place in the persisted list. The list order is the
+    /// order presented by the application.</summary>
+    public void MoveServer(string name, int offset)
+    {
+        var index = _data.Servers.FindIndex(e => e.Name == name);
+        if (index < 0)
+            throw new KeyNotFoundException(name);
+        var destination = index + offset;
+        if (destination < 0 || destination >= _data.Servers.Count)
+            return;
+        var server = _data.Servers[index];
+        _data.Servers.RemoveAt(index);
+        _data.Servers.Insert(destination, server);
+    }
+
+    /// <summary>Re-encrypt every vault secret using a fresh salt and a new Master Password.
+    /// The existing password is required so an unlocked process cannot silently replace it.</summary>
+    public void ChangeMasterPassword(string currentMaster, string newMaster)
+    {
+        if (string.IsNullOrEmpty(newMaster))
+            throw new ArgumentException("A Master Password is required.", nameof(newMaster));
+
+        var currentSalt = Convert.FromBase64String(_data.Kdf.Salt);
+        var currentKey = VaultCrypto.DeriveKey(currentMaster, currentSalt);
+        if (Unwrap(_data.Verifier, currentKey) != VerifierPlaintext)
+            throw new UnauthorizedAccessException("Current Master Password verification failed");
+
+        var passwords = _data.Credentials
+            .Select(c => (c, Password: Unwrap(c.Secret, _key)))
+            .ToList();
+        var newSalt = RandomNumberGenerator.GetBytes(VaultCrypto.SaltLen);
+        var newKey = VaultCrypto.DeriveKey(newMaster, newSalt);
+        _data.Kdf.Salt = Convert.ToBase64String(newSalt);
+        _data.Verifier = Wrap(VerifierPlaintext, newKey);
+        foreach (var (credential, password) in passwords)
+            credential.Secret = Wrap(password, newKey);
+        _key = newKey;
     }
 
     /// <summary>Replace the Credential matched by <paramref name="originalId"/>. A null

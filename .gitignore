@@ -221,3 +221,8 @@ __marimo__/
 *.rdp
 vault.json
 config.json
+
+# --- .NET / build output ---
+[Bb]in/
+[Oo]bj/
+artifacts/

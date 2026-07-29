@@ -65,3 +65,10 @@ dotnet run --project src/BetterRdp.App
 ```
 
 See each folder's `README.md` for details.
+
+## Changing the logo
+
+The header logo is [`csharp/src/BetterRdp.App/Assets/AppLogo.png`](csharp/src/BetterRdp.App/Assets/AppLogo.png).
+Replace that file with your PNG (preferably square or near-square with a transparent
+background), keep the filename, then rebuild the app. It appears at 42 × 42 pixels in the
+header. The PNG you supplied is already installed there.

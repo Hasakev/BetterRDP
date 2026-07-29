@@ -17,23 +17,20 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<Credential> Credentials { get; } = [];
     public ObservableCollection<DisplayProfile> Profiles { get; } = [];
 
-    // Field-based [ObservableProperty]. The partial-property form is the AOT-clean WinUI
-    // pattern, but this toolkit version's generator won't emit its implementation part
-    // (CS9248). MVVMTK0045 here is an AOT-only advisory and harmless for this (non-AOT) app.
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanLaunch))]
     [NotifyPropertyChangedFor(nameof(HasSelectedServer))]
-    private Server? selectedServer;
+    public partial Server? SelectedServer { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanLaunch))]
     [NotifyPropertyChangedFor(nameof(HasSelectedCredential))]
-    private Credential? selectedCredential;
+    public partial Credential? SelectedCredential { get; set; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanLaunch))]
     [NotifyPropertyChangedFor(nameof(HasSelectedProfile))]
-    private DisplayProfile? selectedProfile;
+    public partial DisplayProfile? SelectedProfile { get; set; }
 
     /// <summary>Launch is only possible once a server, a credential and a profile are all chosen.</summary>
     public bool CanLaunch => SelectedServer is not null && SelectedCredential is not null && SelectedProfile is not null;
@@ -142,6 +139,15 @@ public partial class MainViewModel : ObservableObject
         _service.RemoveServer(name);
         ReloadServers();
     }
+
+    public void MoveServer(string name, int offset)
+    {
+        _service.MoveServer(name, offset);
+        ReloadServers();
+    }
+
+    public void ChangeMasterPassword(string currentMaster, string newMaster)
+        => _service.ChangeMasterPassword(currentMaster, newMaster);
 
     public void EditCredential(string originalId, Credential credential)
     {

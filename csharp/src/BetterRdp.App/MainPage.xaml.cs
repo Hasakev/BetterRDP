@@ -109,6 +109,41 @@ public sealed partial class MainPage : Page
             ViewModel.RemoveServer(server.Name);
     }
 
+    private void OnMoveServerUp(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedServer is { } server)
+            ViewModel.MoveServer(server.Name, -1);
+    }
+
+    private void OnMoveServerDown(object sender, RoutedEventArgs e)
+    {
+        if (ViewModel.SelectedServer is { } server)
+            ViewModel.MoveServer(server.Name, 1);
+    }
+
+    private async void OnChangeMasterPassword(object sender, RoutedEventArgs e)
+    {
+        var dialog = new ChangeMasterPasswordDialog { XamlRoot = XamlRoot };
+        while (await dialog.ShowAsync() == ContentDialogResult.Primary)
+        {
+            if (!dialog.HasValidInput(out var validationError))
+            {
+                dialog.ShowError(validationError);
+                continue;
+            }
+            try
+            {
+                ViewModel.ChangeMasterPassword(dialog.CurrentPassword, dialog.NewPassword);
+                await ShowMessageAsync("Master Password changed", "Your vault has been re-encrypted with the new Master Password.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                dialog.ShowError(ex.Message);
+            }
+        }
+    }
+
     private async void OnEditCredential(object sender, RoutedEventArgs e)
     {
         if (ViewModel.SelectedCredential is not { } cred)

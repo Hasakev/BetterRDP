@@ -15,13 +15,22 @@
         </Grid.RowDefinitions>
 
         <!-- Header -->
-        <StackPanel Grid.Row="0" Spacing="2">
-            <TextBlock Text="Better RDP" Style="{ThemeResource TitleLargeTextBlockStyle}" />
-            <TextBlock
-                Text="Pick a server, a credential, and a display — then Launch."
-                Style="{ThemeResource BodyTextBlockStyle}"
-                Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
-        </StackPanel>
+        <Grid Grid.Row="0" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Image Grid.Column="0" Source="ms-appx:///Assets/AppLogo.png" Width="42" Height="42" />
+            <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="Better RDP" Style="{ThemeResource TitleLargeTextBlockStyle}" />
+                <TextBlock
+                    Text="Pick a server, a credential, and a display — then Launch."
+                    Style="{ThemeResource BodyTextBlockStyle}"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </StackPanel>
+            <Button Grid.Column="2" VerticalAlignment="Center" Content="Change Master Password" Click="OnChangeMasterPassword" />
+        </Grid>
 
         <!-- Body: server list (left) + connection card (right) -->
         <Grid Grid.Row="1" ColumnSpacing="16">
@@ -67,6 +76,8 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                         <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <Button
                         Grid.Column="0"
@@ -75,13 +86,27 @@
                         Click="OnAddServer" />
                     <Button
                         Grid.Column="1"
+                        ToolTipService.ToolTip="Move server up"
+                        IsEnabled="{x:Bind ViewModel.HasSelectedServer, Mode=OneWay}"
+                        Click="OnMoveServerUp">
+                        <FontIcon Glyph="&#xE70E;" FontSize="14" />
+                    </Button>
+                    <Button
+                        Grid.Column="2"
+                        ToolTipService.ToolTip="Move server down"
+                        IsEnabled="{x:Bind ViewModel.HasSelectedServer, Mode=OneWay}"
+                        Click="OnMoveServerDown">
+                        <FontIcon Glyph="&#xE70D;" FontSize="14" />
+                    </Button>
+                    <Button
+                        Grid.Column="3"
                         ToolTipService.ToolTip="Edit server"
                         IsEnabled="{x:Bind ViewModel.HasSelectedServer, Mode=OneWay}"
                         Click="OnEditServer">
                         <FontIcon Glyph="&#xE70F;" FontSize="14" />
                     </Button>
                     <Button
-                        Grid.Column="2"
+                        Grid.Column="4"
                         ToolTipService.ToolTip="Delete server"
                         IsEnabled="{x:Bind ViewModel.HasSelectedServer, Mode=OneWay}"
                         Click="OnDeleteServer">

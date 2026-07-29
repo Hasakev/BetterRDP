@@ -89,4 +89,30 @@ public class EditDeleteTests
         Assert.Throws<KeyNotFoundException>(() => v.RemoveCredential("nope"));
         Assert.Throws<KeyNotFoundException>(() => v.RemoveProfile("nope"));
     }
+
+    [Fact]
+    public void MoveServer_changes_the_persisted_list_order()
+    {
+        var path = NewVaultPath();
+        var v = Vault.Create(path, "master");
+        v.AddServer(new Server { Name = "First", Address = "first.local" });
+        v.AddServer(new Server { Name = "Second", Address = "second.local" });
+        v.MoveServer("Second", -1);
+        v.Save();
+
+        Assert.Equal(["Second", "First"], Vault.Open(path, "master").Servers().Select(s => s.Name));
+    }
+
+    [Fact]
+    public void ChangeMasterPassword_reencrypts_and_keeps_credentials_accessible()
+    {
+        var path = NewVaultPath();
+        var v = Vault.Create(path, "old-master");
+        v.AddCredential(new Credential("alice", "alice", Password: "pw-alice"));
+        v.ChangeMasterPassword("old-master", "new-master");
+        v.Save();
+
+        Assert.ThrowsAny<Exception>(() => Vault.Open(path, "old-master"));
+        Assert.Equal("pw-alice", Vault.Open(path, "new-master").GetPassword("alice"));
+    }
 }
