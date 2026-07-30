@@ -49,7 +49,43 @@ private key and must chain to a trusted root (for a self-signed test cert, insta
 Trusted Root Certification Authorities / Trusted Publishers). Then `mstsc` can verify the
 file and display the certificate subject as the Publisher.
 
-## Quick start
+## Install (Windows)
+
+Download `BetterRdp-win-Setup.exe` from the
+[latest release](https://github.com/Hasakev/BetterRDP/releases/latest) and run it. It
+installs per-user (no admin), adds Start-menu and desktop shortcuts, and from then on the
+app updates itself in the background whenever a new release is posted — updates apply
+after you quit, never mid-session.
+
+### The unsigned-installer warnings
+
+Releases are unsigned, so the first install costs two clicks:
+
+1. The browser says the file "isn't commonly downloaded" → **Keep**.
+2. Windows says "Windows protected your PC" → **More info → Run anyway**.
+
+Both come from Mark-of-the-Web, the tag a browser attaches to downloaded files. Neither
+recurs: updates are fetched by the app itself rather than a browser, so they carry no
+Mark-of-the-Web and never trip SmartScreen. Installing per-user also means no UAC prompt.
+It is one warning, once per person.
+
+To skip both entirely, hand out the first install over the intranet instead of a GitHub
+download — copy `BetterRdp-win-Setup.exe` to a file share. Files opened from a UNC path in
+the Local Intranet zone get no Mark-of-the-Web, so SmartScreen never runs. Updates still
+come from GitHub as normal. Failing that, clear the tag by hand:
+
+```pwsh
+Unblock-File .\BetterRdp-win-Setup.exe
+```
+
+A self-signed certificate does **not** help here — SmartScreen keys its reputation on
+certificates Microsoft has seen before, so a homemade one is no better than unsigned. That
+is the opposite of the `.rdp` signing above, where self-signed works fine because you are
+choosing to trust it on your own machines. See
+[`csharp/README.md`](csharp/README.md#shipping-a-release) for the signing hook if you ever
+do buy a certificate.
+
+## Quick start (from source)
 
 **Python:**
 ```pwsh
